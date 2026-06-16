@@ -1,0 +1,208 @@
+import os
+import requests
+from bs4 import BeautifulSoup
+import base64
+import re
+from urllib.parse import urlparse, parse_qs
+
+# ===== CONFIG =====
+API_KEY = "f32e74f0652698d7db9b3e4c06f8b87e"
+SAVE_PATH = "/storage/emulated/0/vega_post"
+
+if not os.path.exists(SAVE_PATH):
+    os.makedirs(SAVE_PATH)
+
+# Super-Bypass Headers: Yeh headers imgbb.zip ko majboor karenge request accept karne ke liye
+BASE_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9,hi;q=0.8",
+    "Connection": "keep-alive",
+    "Sec-Ch-Ua": '"Chromium";v="125", "Not.A/Brand";v="24"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"Windows"',
+    "Sec-Fetch-Dest": "image",
+    "Sec-Fetch-Mode": "no-cors",
+    "Sec-Fetch-Site": "cross-site",
+}
+
+# Python session create kar rahe hain taaki cookies auto-manage ho sakein
+session = requests.Session()
+
+# ===== ADVANCED URL CLEANER & DECODER =====
+def get_clean_url(url):
+    if not url:
+        return url
+    try:
+        # Check agar Vegamovies ka ?p=..&u= wala encoded link hai
+        parsed_url = urlparse(url)
+        query_params = parse_qs(parsed_url.query)
+        if 'u' in query_params:
+            encoded_str = query_params['u'][0]
+            missing_padding = len(encoded_str) % 4
+            if missing_padding:
+                encoded_str += '=' * (4 - missing_padding)
+            try:
+                decoded_url = base64.b64decode(encoded_str).decode('utf-8', errors='ignore')
+                if "http" in decoded_url:
+                    start_idx = decoded_url.find("http")
+                    return decoded_url[start_idx:]
+            except:
+                pass
+    except Exception as e:
+        print(f"⚠️ URL Clean Error: {e}")
+    return url
+
+# ===== UPLOAD IMAGE FUNCTION =====
+def upload_to_imgbb(image_url):
+    if not image_url or "image/gif" in image_url or "base64" in image_url:
+        return image_url
+    
+    # URL clean karo (TMDB bypass ke liye)
+    real_url = get_clean_url(image_url)
+    
+    try:
+        print(f"🔄 Fetching Image: {real_url}")
+        
+        # Dynamic Referer & Origin Generation (imgbb.zip bypass key)
+        parsed_uri = urlparse(real_url)
+        domain_host = parsed_uri.netloc
+        
+        img_headers = BASE_HEADERS.copy()
+        img_headers["Referer"] = f"https://{domain_host}/"
+        img_headers["Host"] = domain_host
+        
+        # Image content stream download
+        response = session.get(real_url, headers=img_headers, timeout=30)
+        
+        # Fallback Strategy: Agar fir bhi 403 aaye, toh main domain ka referer do
+        if response.status_code == 403:
+            img_headers["Referer"] = "https://vegamovies.mq/"
+            response = session.get(real_url, headers=img_headers, timeout=30)
+
+        if response.status_code == 200:
+            img_data = response.content
+            encoded = base64.b64encode(img_data)
+            
+            # ImgBB API Upload
+            res = requests.post(
+                "https://api.imgbb.com/1/upload",
+                data={"key": API_KEY, "image": encoded}
+            )
+            
+            res_json = res.json()
+            if "data" in res_json and "url" in res_json["data"]:
+                uploaded_url = res_json["data"]["url"]
+                print(f"✅ ImgBB Upload Success: {uploaded_url}")
+                return uploaded_url
+            else:
+                print(f"❌ ImgBB API Error: {res_json.get('error', {}).get('message', 'Unknown Error')}")
+                return real_url
+        else:
+            print(f"❌ Image download failed. Status Code: {response.status_code}")
+            return real_url
+            
+    except Exception as e:
+        print(f"⚠️ Process Error: {e}")
+        return real_url
+
+# ===== MAIN FUNCTION =====
+def process_url(url):
+    try:
+        # Main page content load kar rahe hain session ke sath
+        res = session.get(url, headers=BASE_HEADERS)
+        soup = BeautifulSoup(res.text, "html.parser")
+    except Exception as e:
+        print(f"❌ Main URL load nahi ho rahi: {e}")
+        return
+
+    # 1. Top Image (OG Image)
+    og_tag = soup.find("meta", attrs={"property": "og:image"})
+    top_image_url = ""
+    if og_tag:
+        top_image_url = upload_to_imgbb(og_tag.get("content"))
+
+    # 2. Header Clean-up
+    header_tag = soup.find("header", class_="post-header")
+    if header_tag:
+        meta_div = header_tag.find("div", class_="post-meta")
+        if meta_div: meta_div.decompose()
+        
+        title_tag = header_tag.find("h1", class_="post-title")
+        if title_tag:
+            new_title = re.sub(r'Download\s*', '', title_tag.get_text(), flags=re.IGNORECASE)
+            title_tag.string = new_title.strip()
+        header_html = str(header_tag)
+    else:
+        header_html = ""
+
+    # 3. Main Content
+    main_tag = soup.find("main", class_="page-body")
+    if not main_tag:
+        print("❌ Main content nahi mila")
+        return
+
+    # 4. Body ki Images Upload (Screenshots Handler)
+    for img in main_tag.find_all("img"):
+        real_url = img.get("src") or img.get("data-src") or img.get("data-lazy-src")
+        
+        if real_url and "base64" not in real_url:
+            uploaded_link = upload_to_imgbb(real_url)
+            img['src'] = uploaded_link
+            
+            # Saare kharaab/lazy attributes delete karo taaki sirf ImgBB chale
+            for attr in ['data-src', 'data-lazyloaded', 'data-lazy-src', 'srcset', 'data-srcset', 'decoding']:
+                if img.has_attr(attr): 
+                    del img[attr]
+
+    # 5. Buttons Replace
+    new_btn = """
+<div style="margin: 18px 0px; text-align: center;">
+<a href="#" style="background: linear-gradient(135deg, rgb(255, 75, 75), rgb(204, 0, 0)); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: rgba(0, 102, 255, 0.25) 0px 3px 10px; color: white; display: inline-block; font-family: Arial, sans-serif; font-size: 18px; font-weight: 600; padding: 13px 32px; text-decoration: none; transition: 0.3s;">
+⚡ Fast Download
+</a>
+</div>
+"""
+
+    for btn in main_tag.find_all("button", class_="dwd-button"):
+        parent = btn.find_parent("p") or btn
+        parent.replace_with(BeautifulSoup(new_btn, "html.parser"))
+
+    # 6. TEXT REPLACEMENT LOGIC
+    content_str = str(main_tag)
+    domains_to_replace = ["vegamovies.is", "vegamovies.hot", "vegamovies.run", "vegamovies.mx", "vegamovies.li", "vegamovies.vodka", "vegamovies.mq"]
+    for domain in domains_to_replace:
+        content_str = re.sub(domain, "FilmyZone 🎬", content_str, flags=re.IGNORECASE)
+    content_str = re.sub(r'vegamovies', 'FilmyZone 🎬', content_str, flags=re.IGNORECASE)
+
+    # 7. Final Assembly
+    top_img_tag = f'<p style="text-align: center;"><img src="{top_image_url}" style="max-width:100%; height:auto; border-radius: 10px;"/></p>' if top_image_url else ""
+    
+    footer = """
+<hr/>
+<div style="margin: 20px 0px; text-align: center;"><a href="https://t.me/FilmyZone97" style="background: linear-gradient(135deg, rgb(34, 158, 217), rgb(27, 142, 197)); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: rgba(34, 158, 217, 0.25) 0px 3px 10px; color: white; display: inline-block; font-family: Arial, sans-serif; font-size: 18px; font-weight: 600; padding: 13px 32px; text-decoration: none;">⚡Join Telegram
+</a>
+</div>
+"""
+
+    final_html = f'<div class="movies-zone-post">\n{top_img_tag}\n{header_html}\n{content_str}\n{footer}\n</div>'
+
+    # 8. Save
+    file_name = url.strip("/").split("/")[-1] + ".html"
+    path = os.path.join(SAVE_PATH, file_name)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(final_html)
+
+    print(f"✅ Kaam ho gaya! File save hui: {path}")
+
+# ===== LOOP =====
+while True:
+    link = input("\nVegamovies link paste karo: ")
+    if link.strip():
+        process_url(link)
+
+python vega_post.py
+
+https://vegamovies.mq/download-r-l-stines-pumpkinhead-2025-hindi-dubbed-org-english-480p-720p-1080p-web-dl/
+
+
