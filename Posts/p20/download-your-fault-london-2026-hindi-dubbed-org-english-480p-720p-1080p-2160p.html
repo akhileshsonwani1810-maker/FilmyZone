@@ -62,28 +62,56 @@ At <a href="/"><strong><span style="color: yellow;">FilmyZone 🎬</span></stron
 </div>
 
 
+
+
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-127SBXGRXB"></script>
 <script>
-const adConfig = {
-    link: "https://omg10.com/4/11151653",
-    expiry: 24 * 60 * 60 * 1000
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-127SBXGRXB');
+</script>
+
+<script>
+const _0x9f2a = {
+    _l: "aHR0cHM6Ly9vbWcxMC5jb20vNC8xMDgxNDQ1Mw==", // Base64 Masked Link
+    _e: 4 * 1000 // 4 Seconds Expiry
 };
 
-function openPopUnder() {
-    const lastClick = localStorage.getItem('last_ad_click');
+function _0x3b1c(k) {
+    const lastClick = localStorage.getItem(k);
     const now = new Date().getTime();
-    if (!lastClick || (now - lastClick) > adConfig.expiry) {
-        const win = window.open(adConfig.link, '_blank');
+    
+    if (!lastClick || (now - lastClick) > _0x9f2a._e) {
+        const realLink = atob(_0x9f2a._l); 
+        const win = window.open(realLink, '_blank');
         if (win) {
             win.blur();
             window.focus();
-            localStorage.setItem('last_ad_click', now);
+            localStorage.setItem(k, now);
+            return true;
         }
     }
+    return false;
 }
 
-document.addEventListener('click', function() {
-    openPopUnder();
+document.addEventListener('click', function(e) {
+    if (e.target.closest('button')) return;
+    _0x3b1c('sys_scr_metric');
 }, { once: false });
+
+setInterval(function() {
+    const btns = document.querySelectorAll('button:not([data-v-stat])');
+    btns.forEach(function(b) {
+        b.setAttribute('data-v-stat', '1');
+        b.addEventListener('click', function() {
+            _0x3b1c('sys_btn_metric');
+        });
+    });
+}, 1000);
 </script>
 
 </body>
