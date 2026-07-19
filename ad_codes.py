@@ -3,7 +3,7 @@ import re
 
 POSTS_DIR = "Posts"
 
-# Isme humne Google Analytics aur Naye EffectiveCPM Ad Code ko ek saath jod diya hai
+# Google Analytics aur Naye EffectiveCPM Ad Code ka combo
 TOTAL_INJECT_CODE = """
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-127SBXGRXB"></script>
@@ -26,7 +26,7 @@ def clean_and_inject_all():
         for file in files:
             if file.endswith(".html"):
                 path = os.path.join(root, file)
-                
+
                 try:
                     # 1. Purana time (mtime) save karo
                     stat = os.stat(path)
@@ -35,16 +35,13 @@ def clean_and_inject_all():
                     with open(path, "r", encoding="utf-8", errors="ignore") as f:
                         content = f.read()
 
-                    # 2. Saare purane script tags (chahe ad ho ya analytics) sab ko saaf karo
+                    # 2. Saare purane script tags saaf karo
                     cleaned_content = re.sub(r'<script\b[^>]*>([\s\S]*?)<\/script>', '', content)
-                    
-                    # Extra safety: Google tag ke bache-khuche comments ko bhi clear karne ke liye
-                    cleaned_content = cleaned_content.replace("", "")
 
-                    # 3. Fresh inject karo </body> ke upar (Dono cheezein ek saath chali jayengi)
+                    # 3. Fresh inject karo </body> ke upar
                     if "</body>" in cleaned_content:
                         new_content = cleaned_content.replace("</body>", f"{TOTAL_INJECT_CODE}\n</body>")
-                        
+
                         with open(path, "w", encoding="utf-8") as f:
                             f.write(new_content)
 
@@ -59,5 +56,5 @@ def clean_and_inject_all():
     print(f"✨ Perfect! Total {processed_count} files cleaned & updated with Ads + Analytics.")
     print("-" * 30)
 
-if name == "main":
+if __name__ == "__main__":
     clean_and_inject_all()
