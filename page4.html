@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="https://inputoppose.com/a4/34/23/a43423c30ad34b94c641ba2065e97cc1.js"></script>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FilmyZone 🎬</title>
+<link rel="stylesheet" href="style.css">
+<style>
+    .pagination { display: flex; justify-content: center; align-items: center; gap: 5px; margin: 30px 10px; flex-wrap: wrap; }
+    .page-btn, .page-num { padding: 8px 12px; border: 1px solid #00ff88; color: #00ff88; text-decoration: none; border-radius: 4px; font-size: 14px; min-width: 35px; text-align: center; }
+    .page-num.active { background: #00ff88; color: #000; font-weight: bold; border-color: #00ff88; }
+    .dots { color: #00ff88; padding: 0 5px; }
+    .page-btn:hover, .page-num:hover:not(.active) { background: rgba(0, 255, 136, 0.1); }
+    @media (max-width: 600px) { .page-btn { font-size: 12px; padding: 6px 10px; } }
+</style>
+</head>
+<body>
+<header class="site-header"><a href="/" class="site-title">FilmyZone 🎬</a><p class="tagline">Latest Movies & Web Series</p></header>
+<div class="search-box" style="text-align:center; margin: 20px 0;"><input type="text" id="searchInput" placeholder="Search all movies..." style="width: 90%; max-width: 500px; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: white; outline: none;"></div>
+<main class="home-container" id="postList"><a class="post-card" href="Posts/p20/Mathu_Vadalara_2019_Dual_Audio_Hindi_HQ_Dub_Telugu_Full_Movie_WEB.html"><img src="https://res.cloudinary.com/dj1csslg1/image/upload/v1779692606/movies_zone/rimjehh63uj7rz1gss4n.jpg"><h2>Mathu Vadalara (2019) Dual Audio [Hindi (HQ Dub) & Telugu] Full Movie ESub 480p [450MB] | 720p [1.1GB] | 1080p [3.1GB] – WEB-DL</h2></a><a class="post-card" href="Posts/p20/1920-2008-Hindi-Full-Movie-WEB-DL-ESub.html"><img src="https://res.cloudinary.com/dj1csslg1/image/upload/v1778775616/movies_zone/ro6k2l6letfwpi4pigtr.jpg"><h2>1920 (2008) Hindi Full Movie ESub 480p [450MB] | 720p [1.4GB] | 1080p [2.8GB] – WEB-DL</h2></a><a class="post-card" href="Posts/p20/1920-Evil-Returns-2012-Hindi-Full-Movie-BluRay-ESub.html"><img src="https://res.cloudinary.com/dj1csslg1/image/upload/v1778775605/movies_zone/ywexl5qnlg6vz8n0fvzp.jpg"><h2>1920 Evil Returns (2012) Hindi Full Movie ESub 480p [400MB] | 720p [1.2GB] | 1080p [2.5GB] – BluRay</h2></a></main>
+<div class="pagination"><a href="page3.html" class="page-btn">← Previous</a><a href="index.html" class="page-num ">1</a><a href="page2.html" class="page-num ">2</a><a href="page3.html" class="page-num ">3</a><a href="page4.html" class="page-num active">4</a></div>
+<footer class="site-footer">© 2026 FilmyZone 🎬 | All Rights Reserved</footer>
+<script>
+let movieData = [];
+async function loadSearchData() { const res = await fetch('search_data.json'); movieData = await res.json(); }
+loadSearchData();
+const input = document.getElementById("searchInput"), postList = document.getElementById("postList"), originalContent = postList.innerHTML;
+input.addEventListener("input", function () {
+    const val = input.value.toLowerCase().trim();
+    if (val.length < 2) { postList.innerHTML = originalContent; return; }
+    const res = movieData.filter(m => m.t.toLowerCase().includes(val));
+    if (res.length > 0) { postList.innerHTML = res.map(m => `<a class="post-card" href="${m.u}"><img src="${m.i}"><h2>${m.t}</h2></a>`).join(""); }
+    else { postList.innerHTML = "<p style='color:white; text-align:center; width:100%;'>No movies found!</p>"; }
+});
+</script>
+</body></html>
